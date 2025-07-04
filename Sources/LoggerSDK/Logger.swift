@@ -71,9 +71,8 @@ public class Logger {
     public func log(_ message: String, level: LogLevel) {
         guard level >= minimumLevel else { return }
         
-        let entry = LogEntry(timestamp: Date(), level: level, message: message)
-        
         queue.async(flags: .barrier) {
+            let entry = LogEntry(timestamp: Date(), level: level, message: message)
             self.logs.append(entry)
         }
     }
