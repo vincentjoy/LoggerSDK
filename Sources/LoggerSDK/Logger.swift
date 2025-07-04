@@ -8,10 +8,10 @@
 import Foundation
 
 /// A lightweight logging utility that provides thread-safe logging with different severity levels
-public class Logger {
+public final class Logger: @unchecked Sendable {
     
     /// Represents the severity level of a log message
-    public enum LogLevel: Int, CaseIterable, Comparable {
+    public enum LogLevel: Int, CaseIterable, Comparable, Sendable {
         case info = 0
         case warning = 1
         case error = 2
@@ -34,7 +34,7 @@ public class Logger {
     }
     
     /// Represents a single log entry with timestamp, level, and message
-    public struct LogEntry {
+    public struct LogEntry: Sendable {
         public let timestamp: Date
         public let level: LogLevel
         public let message: String

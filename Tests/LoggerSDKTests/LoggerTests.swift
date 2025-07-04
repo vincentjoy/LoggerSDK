@@ -76,6 +76,38 @@ final class LoggerTests: XCTestCase {
         XCTAssertEqual(logs[0].level, .error)
     }
     
+    // MARK: - Thread Safety Tests
+    
+    func testThreadSafety() {
+        let expectation = XCTestExpectation(description: "Concurrent logging")
+        let iterationCount = 100
+        let threadCount = 10
+        let testLogger = self.logger! // Capture logger locally
+        
+        let group = DispatchGroup()
+        
+        for threadIndex in 0..<threadCount {
+            group.enter()
+            DispatchQueue.global(qos: .default).async {
+                for i in 0..<iterationCount {
+                    testLogger.log("Thread \(threadIndex) - Message \(i)", level: .info)
+                }
+                group.leave()
+            }
+        }
+        
+        group.notify(queue: .main) {
+            // Wait a bit more for all async operations to complete
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                let logs = testLogger.getRecentLogs()
+                XCTAssertEqual(logs.count, threadCount * iterationCount)
+                expectation.fulfill()
+            }
+        }
+        
+        wait(for: [expectation], timeout: 5.0)
+    }
+    
     // MARK: - Timestamp Tests
     
     func testTimestampOrdering() {
@@ -210,14 +242,29 @@ final class LoggerTests: XCTestCase {
         }
     }
     
-    func testRetrievalPerformance() {
-        // Setup: Add many log entries
-        for i in 0..<10000 {
-            logger.log("Setup message \(i)", level: .info)
+    func testConcurrentLogger() {
+        let logger = Logger()
+        let expectation = XCTestExpectation(description: "Concurrent logging completed")
+        
+        let group = DispatchGroup()
+        
+        for index in 0..<100 {
+            group.enter()
+            DispatchQueue.global(qos: .default).async {
+                logger.log("Concurrent message \(index)", level: .info)
+                group.leave()
+            }
         }
         
-        measure {
-            _ = logger.getRecentLogs()
+        group.notify(queue: .main) {
+            // Wait a bit for all async operations to complete
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                let logs = logger.getRecentLogs()
+                XCTAssertEqual(logs.count, 100)
+                expectation.fulfill()
+            }
         }
+        
+        wait(for: [expectation], timeout: 5.0)
     }
 }
